@@ -15,8 +15,16 @@
  */
 package com.amazonaws.devicefarm;
 
-import com.amazonaws.services.devicefarm.AWSDeviceFarmClient;
-import com.amazonaws.services.devicefarm.model.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.FileEntity;
@@ -24,13 +32,13 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.gradle.api.logging.Logger;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
+import com.amazonaws.services.devicefarm.AWSDeviceFarmClient;
+import com.amazonaws.services.devicefarm.model.CreateUploadRequest;
+import com.amazonaws.services.devicefarm.model.GetUploadRequest;
+import com.amazonaws.services.devicefarm.model.GetUploadResult;
+import com.amazonaws.services.devicefarm.model.Project;
+import com.amazonaws.services.devicefarm.model.Upload;
+import com.amazonaws.services.devicefarm.model.UploadType;
 
 
 /**
@@ -96,20 +104,23 @@ public class DeviceFarmUploader {
     }
 
     public Collection<Upload> batchUpload(final List<File> artifacts, final Project project, final UploadType uploadType) {
-
-        return artifacts.stream()
-                .map(app -> uploadExecutor.submit(() -> upload(app, project, uploadType)))
-                .collect(Collectors.toList())
-                .stream()
-                .map(f -> {
-                    try {
-                        return f.get();
-                    } catch (Exception e) {
-                        throw new DeviceFarmException(e);
-                    }
-                })
-                .collect(Collectors.toList());
-
+      final List<Future<Upload>> futures = new ArrayList<>();
+      for (final File app : artifacts) {
+        futures.add(uploadExecutor.submit(new Callable<Upload>() {
+          @Override public Upload call() throws Exception {
+            return upload(app, project, uploadType);
+          }
+        }));
+      }
+      List<Upload> uploads = new ArrayList<>();
+      for (Future<Upload> future : futures) {
+        try {
+          uploads.add(future.get());
+        } catch (Exception e) {
+          throw new DeviceFarmException(e);
+        }
+      }
+      return uploads;
     }
 
     private void waitForUpload(final File file, final Upload upload) {

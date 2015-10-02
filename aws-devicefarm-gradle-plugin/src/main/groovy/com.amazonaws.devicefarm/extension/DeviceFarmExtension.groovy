@@ -19,7 +19,7 @@ import org.gradle.api.Project
 
 class DeviceFarmExtension {
 
-    private final Project project
+    final Project project
 
     /**
      * [Required] Name of Device Farm project which contains this application.
@@ -64,6 +64,8 @@ class DeviceFarmExtension {
      * Device State configuration
      */
     DeviceState deviceState = new DeviceState()
+
+    public boolean waitForTestRun = false
 
     /**
      * The configured test to run, 'instrumentation' test is default

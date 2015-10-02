@@ -15,17 +15,25 @@
  */
 package com.amazonaws.devicefarm;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
+
+import org.gradle.api.logging.Logger;
+
 import com.amazonaws.devicefarm.extension.DeviceFarmExtension;
 import com.amazonaws.devicefarm.extension.TestPackageProvider;
 import com.amazonaws.services.devicefarm.AWSDeviceFarmClient;
-import com.amazonaws.services.devicefarm.model.*;
+import com.amazonaws.services.devicefarm.model.BillingMethod;
+import com.amazonaws.services.devicefarm.model.DevicePool;
+import com.amazonaws.services.devicefarm.model.Project;
+import com.amazonaws.services.devicefarm.model.ScheduleRunConfiguration;
+import com.amazonaws.services.devicefarm.model.ScheduleRunRequest;
+import com.amazonaws.services.devicefarm.model.ScheduleRunResult;
+import com.amazonaws.services.devicefarm.model.ScheduleRunTest;
+import com.amazonaws.services.devicefarm.model.Upload;
+import com.amazonaws.services.devicefarm.model.UploadType;
 import com.android.builder.testing.api.TestServer;
-import org.gradle.api.logging.Logger;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**
@@ -99,7 +107,7 @@ public class DeviceFarmServer extends TestServer {
                 .withTestPackageArn(uploadTestPackageIfNeeded(project, testPackage));
 
         final ScheduleRunConfiguration configuration = new ScheduleRunConfiguration()
-                .withAuxiliaryApps(auxApps.stream().map(Upload::getArn).collect(Collectors.toList()))
+                //.withAuxiliaryApps(auxApps.stream().map(Upload::getArn).collect(Collectors.toList()))
                 .withExtraDataPackageArn(extraDataArn)
                 .withLocale(extension.getDeviceState().getLocale().toString())
                 .withLocation(extension.getDeviceState().getLocation())
@@ -118,6 +126,15 @@ public class DeviceFarmServer extends TestServer {
 
         logger.lifecycle(String.format("View the %s run in the AWS Device Farm Console: %s",
                 runTest.getType(), utils.getRunUrlFromArn(response.getRun().getArn())));
+
+        if (extension.waitForTestRun) {
+          File junitXml = extension.getProject().file("build/awsDeviceFarm/junit-reports/" + response.getRun().getArn() + ".xml");
+          File spoonOutputDir = extension.getProject().file("build/test-reports/spoon");
+          logger.lifecycle(String.format("View the JUnit report here soon: %s", junitXml.getAbsolutePath()));
+          DeviceFarmToJUnit testProcessor = new DeviceFarmToJUnit(api);
+          testProcessor.waitForTestRun(response.getRun().getArn(), junitXml, spoonOutputDir);
+          logger.lifecycle(String.format("View the Spoon report here: %s", testProcessor.getSpoonIndexHtmlFile().getAbsolutePath()));
+        }
     }
 
     /**
@@ -151,10 +168,10 @@ public class DeviceFarmServer extends TestServer {
         final Collection<Upload> auxApps = uploader.batchUpload(extension.getDeviceState().getAuxiliaryApps(),
                 project, UploadType.ANDROID_APP);
 
-        auxApps.stream().forEach(
-                upload ->
-                        logger.lifecycle(String.format("Will install additional app %s, %s",
-                                upload.getName(), upload.getArn())));
+//        auxApps.stream().forEach(
+//                upload ->
+//                        logger.lifecycle(String.format("Will install additional app %s, %s",
+//                                upload.getName(), upload.getArn())));
         return auxApps;
     }
 

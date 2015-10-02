@@ -15,27 +15,36 @@
  */
 package com.amazonaws.devicefarm;
 
-import com.amazonaws.devicefarm.extension.Authentication;
-import com.amazonaws.devicefarm.extension.DeviceFarmExtension;
-import com.amazonaws.services.devicefarm.AWSDeviceFarmClient;
-import com.amazonaws.services.devicefarm.model.*;
-import com.android.build.gradle.AppExtension;
-import mockit.Expectations;
-import mockit.Injectable;
-import mockit.Mocked;
-import mockit.Verifications;
-import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
-import org.gradle.api.logging.Logger;
-import org.testng.annotations.Test;
+import static org.testng.Assert.assertEquals;
+import static org.testng.AssertJUnit.assertNotNull;
+import static org.testng.AssertJUnit.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.AssertJUnit.assertNotNull;
-import static org.testng.AssertJUnit.assertTrue;
+import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
+import org.gradle.testfixtures.ProjectBuilder;
+import org.testng.annotations.Test;
+
+import com.amazonaws.devicefarm.extension.DeviceFarmExtension;
+import com.amazonaws.services.devicefarm.AWSDeviceFarmClient;
+import com.amazonaws.services.devicefarm.model.DevicePool;
+import com.amazonaws.services.devicefarm.model.ListDevicePoolsRequest;
+import com.amazonaws.services.devicefarm.model.ListDevicePoolsResult;
+import com.amazonaws.services.devicefarm.model.ListProjectsRequest;
+import com.amazonaws.services.devicefarm.model.ListProjectsResult;
+import com.amazonaws.services.devicefarm.model.Run;
+import com.amazonaws.services.devicefarm.model.ScheduleRunRequest;
+import com.amazonaws.services.devicefarm.model.ScheduleRunResult;
+import com.amazonaws.services.devicefarm.model.TestType;
+import com.amazonaws.services.devicefarm.model.Upload;
+import com.amazonaws.services.devicefarm.model.UploadType;
+import com.android.build.gradle.AppExtension;
+import mockit.Expectations;
+import mockit.Injectable;
+import mockit.Verifications;
 
 
 public class DeviceFarmPluginTest {
@@ -65,22 +74,22 @@ public class DeviceFarmPluginTest {
     @Test
     public void instrumentationTest(@Injectable File testPackage, @Injectable File testedApp) throws IOException {
 
-        ListProjectsResult projectList = new ListProjectsResult();
-        com.amazonaws.services.devicefarm.model.Project myProject = new com.amazonaws.services.devicefarm.model.Project()
+        final ListProjectsResult projectList = new ListProjectsResult();
+        final com.amazonaws.services.devicefarm.model.Project myProject = new com.amazonaws.services.devicefarm.model.Project()
                 .withName("MyProject")
                 .withArn("1234");
 
         projectList.setProjects(Arrays.asList(myProject));
 
-        ListDevicePoolsResult devicePoolList = new ListDevicePoolsResult();
+        final ListDevicePoolsResult devicePoolList = new ListDevicePoolsResult();
         devicePoolList.setDevicePools(Arrays.asList(new DevicePool().withName("Top Devices").withArn("1234")));
 
-        DeviceFarmExtension extension = new DeviceFarmExtension(gradleProject);
+        final DeviceFarmExtension extension = new DeviceFarmExtension(gradleProject);
         extension.setProjectName("MyProject");
 
-        DeviceFarmServer server = new DeviceFarmServer(extension, loggerMock, apiMock, uploaderMock, new DeviceFarmUtils(apiMock, extension));
+        final DeviceFarmServer server = new DeviceFarmServer(extension, loggerMock, apiMock, uploaderMock, new DeviceFarmUtils(apiMock, extension));
 
-        ScheduleRunResult runResult = new ScheduleRunResult();
+        final ScheduleRunResult runResult = new ScheduleRunResult();
         runResult.setRun(new Run());
         runResult.getRun().setArn("arn:1:2:3:4:5:runarn/projarn");
 
